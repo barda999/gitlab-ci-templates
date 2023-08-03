@@ -1,0 +1,37 @@
+.deploy:
+  stage: deploy
+  image: alpine/helm:3.9.0
+  variables:
+    APP_NAME: $CI_PROJECT_NAME
+    HELM_RELEASE: "$APP_NAME-$CI_COMMIT_REF_NAME"
+    HELM_RELEASE_NAMESPACE: $APP_NAME
+    DEPLOYMENT_VALUES_PATH: "./deployment/values.yml"
+    IMAGE_NAME: $REGISTRY_URL/$APP_NAME
+    IMAGE_TAG: $CI_COMMIT_REF_NAME
+  script:
+    - helm repo add toman $HELM_REPO --username $HELM_USER --password $HELM_PASSWD
+    - helm repo update
+    - helm upgrade -i -n $HELM_RELEASE_NAMESPACE $HELM_RELEASE toman/deployment 
+      -f $DEPLOYMENT_VALUES_PATH
+      --set image.repository=$IMAGE_NAME
+      --set app.version=$IMAGE_TAG
+
+.deploy-prod:
+  extends: .deploy
+  variables:
+    HELM_RELEASE: "$APP_NAME-production"
+    IMAGE_TAG: latest
+  when: manual
+  tags:
+    - hamravesh-prod
+
+.remove:
+  stage: deploy
+  image: alpine/helm:3.9.0
+  variables:
+    APP_NAME: $CI_PROJECT_NAME
+    HELM_RELEASE: "$APP_NAME-$CI_COMMIT_REF_NAME"
+    HELM_RELEASE_NAMESPACE: $APP_NAME
+  script:
+    - helm uninstall -n $HELM_RELEASE_NAMESPACE $HELM_RELEASE
+  when: manual

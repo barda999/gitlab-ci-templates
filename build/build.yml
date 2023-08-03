@@ -1,0 +1,69 @@
+.build:
+  stage: build
+  image: quay.io/podman/stable
+  variables:
+    APP_NAME: $CI_PROJECT_NAME
+    IMAGE_NAME: $REGISTRY_URL/$APP_NAME
+    IMAGE_TAG: $CI_COMMIT_REF_NAME
+    EXTRA_BUILD_OPTIONS: ""
+  script:
+    - echo $REGISTRY_PASSWD | podman login -u $REGISTRY_USER --password-stdin $REGISTRY_URL
+    - podman build -t $IMAGE_NAME:$IMAGE_TAG $EXTRA_BUILD_OPTIONS .
+    - podman push $IMAGE_NAME:$IMAGE_TAG
+
+.build-base:
+  extends: .build
+  stage: build-base
+  variables:
+    IMAGE_NAME: "$REGISTRY_URL/$APP_NAME-base"
+    EXTRA_BUILD_OPTIONS: "-f Dockerfile.base"
+
+.build-from-base:
+  extends: .build
+  variables:
+    BASE_IMAGE: "$REGISTRY_URL/$APP_NAME-base"
+    EXTRA_BUILD_OPTIONS: "--build-arg BASE_IMAGE=$BASE_IMAGE"
+
+.build-base-prod:
+  extends: .build-base
+  variables:
+    IMAGE_TAG: latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+  tags:
+    - hamravesh-prod
+
+.build-base-python:
+  extends: .build
+  stage: build-base
+  variables:
+    IMAGE_NAME: "$REGISTRY_URL/$APP_NAME-base"
+    EXTRA_BUILD_OPTIONS: "-f Dockerfile.base --build-arg PYPI_USERNAME=${PYPI_USERNAME} --build-arg PYPI_PASSWORD=${PYPI_PASSWORD} --build-arg PYPI_INDEX_URL=${PYPI_INDEX_URL}"
+
+.build-base-python-prod:
+  extends: .build
+  stage: build-base
+  variables:
+    IMAGE_NAME: "$REGISTRY_URL/$APP_NAME-base"
+    IMAGE_TAG: latest
+    BASE_IMAGE: "$REGISTRY_URL/$APP_NAME-base"
+    EXTRA_BUILD_OPTIONS: "-f Dockerfile.base --build-arg BASE_IMAGE=$BASE_IMAGE --build-arg PYPI_USERNAME=$PYPI_USERNAME --build-arg PYPI_PASSWORD=$PYPI_PASSWORD --build-arg PYPI_INDEX_URL=$PYPI_INDEX_URL"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+  tags:
+    - hamravesh-prod
+
+.build-from-base-prod:
+  extends: .build
+  variables:
+    IMAGE_TAG: latest
+    BASE_IMAGE: "$REGISTRY_URL/$APP_NAME-base"
+    EXTRA_BUILD_OPTIONS: "--build-arg BASE_IMAGE=$BASE_IMAGE"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+  tags:
+    - hamravesh-prod
+
+.build-from-base-python-prod:
+  extends: .build-from-base-prod
+
