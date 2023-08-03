@@ -30,8 +30,6 @@
     IMAGE_TAG: latest
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
-  tags:
-    - hamravesh-prod
 
 .build-base-python:
   extends: .build
