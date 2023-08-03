@@ -22,8 +22,6 @@
     HELM_RELEASE: "$APP_NAME-production"
     IMAGE_TAG: latest
   when: manual
-  tags:
-    - hamravesh-prod
 
 .remove:
   stage: deploy
